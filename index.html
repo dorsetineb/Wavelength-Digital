@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sintonia Digital</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Questrial&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Questrial', sans-serif;
+        background-color: #ededed;
+        color: #333;
+      }
+      /* Custom Dial Transition */
+      .needle-transition {
+        transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+      }
+      .cover-transition {
+        transition: clip-path 0.8s ease-in-out, opacity 0.5s ease;
+      }
+      
+      /* Spin Animation for the Target Wheel */
+      .spin-decelerate {
+        animation: spin-stop 1.5s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+      }
+      
+      @keyframes spin-stop {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(1080deg); } /* Spins 3 times and lands */
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.1/",
+    "react": "https://aistudiocdn.com/react@^19.2.1",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.32.0",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.556.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
