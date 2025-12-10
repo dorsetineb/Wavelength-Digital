@@ -111,7 +111,7 @@ const App: React.FC = () => {
         setCurrentCard(card);
         pickRandomTheme();
         setPhase(GamePhase.SETUP_TARGET);
-        setGuessAngle(0); 
+        // Removed setGuessAngle(0) here to persist position
         
         setTimeout(() => setFadeConcepts(true), 100);
     }, 500);
@@ -131,7 +131,7 @@ const App: React.FC = () => {
     setPhase(GamePhase.LOADING_CARD);
     setCurrentCard(null); // Force loading state
     setTargetAngle(null);
-    setGuessAngle(0); 
+    // Removed setGuessAngle(0) here to persist position
     setScore(null);
     setScoreMessage("");
     setIsSpinning(false);

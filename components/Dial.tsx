@@ -12,7 +12,7 @@ interface DialProps {
 const Dial: React.FC<DialProps> = ({ phase, targetAngle, guessAngle, onAngleChange, isSpinning = false }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const ignoreClickRef = useRef(false); // Ref to suppress clicks immediately after dragging
+  const ignoreClickRef = useRef(false); 
   
   const rotationRef = useRef(0);
   const [displayRotation, setDisplayRotation] = useState(0);
@@ -57,31 +57,61 @@ const Dial: React.FC<DialProps> = ({ phase, targetAngle, guessAngle, onAngleChan
     if (!svgRef.current) return;
     const rect = svgRef.current.getBoundingClientRect();
     
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
-
-    const dx = x - CX;
-    const dy = y - CY;
-    let theta = Math.atan2(dy, dx) * (180 / Math.PI); // degrees
-
-    if (theta < 0) theta += 360;
-
-    let gameAngle = 0;
+    // Scale Logic:
+    // The SVG viewBox is 300x170.
+    // The rendered element might be different size.
+    // We map the mouse position to the SVG coordinate space (roughly)
+    // or better yet, calculate the center in screen pixels and use that.
     
-    // Map Cartesian angle to Game Angle (0-180)
-    if (theta >= 180 && theta <= 270) {
-        gameAngle = theta - 180;
-    } else if (theta > 270 && theta <= 360) {
-        gameAngle = theta - 180;
-    } else if (theta >= 0 && theta < 90) {
-        gameAngle = 180;
-    } else {
-        if (theta > 90 && theta < 135) gameAngle = 180;
-        else gameAngle = 0;
+    // Visual center in SVG coords is CX(150), CY(150).
+    // Viewbox is 0,0,300,170.
+    const viewBoxWidth = 300;
+    const viewBoxHeight = 170;
+    
+    // Calculate center relative to the bounding box
+    const centerXRelative = (CX / viewBoxWidth) * rect.width;
+    const centerYRelative = (CY / viewBoxHeight) * rect.height;
+    
+    const centerXPx = rect.left + centerXRelative;
+    const centerYPx = rect.top + centerYRelative;
+
+    const dx = clientX - centerXPx;
+    const dy = clientY - centerYPx;
+
+    // Calculate angle in degrees from -180 to 180
+    // Right = 0, Down = 90, Left = 180/-180, Up = -90
+    const rad = Math.atan2(dy, dx);
+    const deg = rad * (180 / Math.PI);
+
+    // Map to Game Coordinates (0 = Left, 90 = Up, 180 = Right)
+    // Formula: GameAngle = deg + 180
+    // -180 (Left) -> 0
+    // -90 (Up) -> 90
+    // 0 (Right) -> 180
+    
+    let gameAngle = deg + 180;
+
+    // Handle clamping for bottom half
+    // If the user drags into the bottom half (dy > 0 usually, or angle > 0 and < 180 in `deg` terms?)
+    // Actually, `deg` is -180 to 180.
+    // Top half is -180 to 0.
+    // Bottom half is 0 to 180.
+    
+    // gameAngle range logic:
+    // If deg is in [-180, 0] -> gameAngle is [0, 180]. (Valid Range)
+    // If deg is in (0, 180] -> gameAngle is (180, 360]. (Bottom Range)
+    
+    if (gameAngle > 180) {
+        // We are in the bottom half. Snap to nearest side.
+        // Bottom-Left (deg > 90) -> Snap to 0.
+        // Bottom-Right (deg <= 90) -> Snap to 180.
+        if (deg > 90) {
+            gameAngle = 0;
+        } else {
+            gameAngle = 180;
+        }
     }
-    
-    gameAngle = Math.max(0, Math.min(180, gameAngle));
-    
+
     onAngleChange(gameAngle);
   }, [onAngleChange]);
 
@@ -96,8 +126,6 @@ const Dial: React.FC<DialProps> = ({ phase, targetAngle, guessAngle, onAngleChan
         if (isDragging) {
             setIsDragging(false);
             
-            // Set a temporary flag to ignore any clicks that occur immediately after release.
-            // This prevents the "Drag Release" from bubbling up as a click to the App.
             ignoreClickRef.current = true;
             setTimeout(() => {
                 ignoreClickRef.current = false;
@@ -127,11 +155,7 @@ const Dial: React.FC<DialProps> = ({ phase, targetAngle, guessAngle, onAngleChan
   const startDrag = (e: React.MouseEvent | React.TouchEvent) => {
       if (phase !== GamePhase.GUESSING) return;
       
-      // Stop propagation so we don't trigger the global "advance" click when starting a drag
       e.stopPropagation(); 
-      // Also prevent default to stop text selection or weird browser behaviors
-      // e.preventDefault(); // (Optional: keeping off for now to ensure touch works)
-      
       setIsDragging(true);
       
       let clientX, clientY;
@@ -142,24 +166,21 @@ const Dial: React.FC<DialProps> = ({ phase, targetAngle, guessAngle, onAngleChan
           clientX = (e as React.MouseEvent).clientX;
           clientY = (e as React.MouseEvent).clientY;
       }
+      handleInteraction(clientX, clientY);
   };
 
   const handleClickCapture = (e: React.MouseEvent) => {
-      // If we just finished dragging, kill the click event here.
       if (ignoreClickRef.current) {
           e.stopPropagation();
           e.preventDefault();
       }
   };
 
-  // --- Rendering Helpers ---
-
   const renderWedgeGraphic = () => {
       const centerAngle = 90; 
-      // Increased sizes slightly for visual weight and to fit numbers
-      const centerSize = 8;   // Was 6
-      const midSize = 22;     // Was 17
-      const outSize = 36;     // Was 30
+      const centerSize = 8;
+      const midSize = 22;
+      const outSize = 36;
 
       const createPath = (size: number, color: string) => {
         const start = Math.max(0, centerAngle - size / 2);
@@ -190,9 +211,6 @@ const Dial: React.FC<DialProps> = ({ phase, targetAngle, guessAngle, onAngleChan
 
       const renderText = (text: string, offsetAngle: number) => {
           const finalAngle = targetAngle + offsetAngle;
-          
-          // Position numbers INSIDE the radius. 
-          // R = 120, so R-12 puts them nicely inside the outer rim of the wedges.
           const textDist = R - 12; 
           const coords = getCoordinates(finalAngle, textDist);
           
@@ -216,10 +234,6 @@ const Dial: React.FC<DialProps> = ({ phase, targetAngle, guessAngle, onAngleChan
           );
       };
 
-      // Adjusted offsets to match the centers of the new wedge bands
-      // Center (4): 0 deg
-      // Blue (3): The band is between 4deg and 11deg (half sizes). Center ~7.5 deg
-      // Orange (2): The band is between 11deg and 18deg. Center ~14.5 deg
       return (
           <g className="fade-in">
               {renderText("4", 0)}
@@ -264,6 +278,8 @@ const Dial: React.FC<DialProps> = ({ phase, targetAngle, guessAngle, onAngleChan
         className="relative w-full aspect-[2/1] mx-auto select-none touch-none"
         style={{ cursor: 'pointer' }}
         onClickCapture={handleClickCapture}
+        onMouseDown={startDrag}
+        onTouchStart={startDrag}
     >
       <svg 
         ref={svgRef}
@@ -313,15 +329,13 @@ const Dial: React.FC<DialProps> = ({ phase, targetAngle, guessAngle, onAngleChan
 
         {/* 6. The Needle (Red Pointer) */}
         <g 
-            className="needle-transition"
+            className={isDragging ? "" : "needle-transition"}
             style={{ 
                 transformOrigin: `${CX}px ${CY}px`,
                 transform: `rotate(${guessAngle - 90}deg)`,
-                cursor: phase === GamePhase.GUESSING ? 'grab' : 'default'
+                cursor: phase === GamePhase.GUESSING ? 'grab' : 'default',
             }}
-            onMouseDown={startDrag}
-            onTouchStart={startDrag}
-            onClick={(e) => e.stopPropagation()} /* Ensure clicking the needle (without dragging) doesn't bubble */
+            onClick={(e) => e.stopPropagation()}
         >
              {/* Invisible hitbox for easier grabbing */}
              <rect x={CX - 25} y={CY - R - 30} width={50} height={R + 60} fill="transparent" />
