@@ -188,13 +188,6 @@ const App: React.FC = () => {
     
     const diff = Math.abs(targetAngle - guessAngle);
     
-    // Wedge sizes (approximate based on Dial logic):
-    // 4 points: +/- 4 deg
-    // 3 points: +/- 11 deg
-    // 2 points: +/- 18 deg
-    
-    // Using slightly tighter logic to match visual exactness if needed, 
-    // but these values match the visual widths in Dial.tsx
     if (diff <= 4) {
       setScore(4);
       setScoreMessage("TRANSMISSÃO DE PENSAMENTO!");
@@ -230,13 +223,12 @@ const App: React.FC = () => {
   };
 
   const handleGlobalClick = () => {
-      // If spinning or loading, ignore clicks
       if (isSpinning || phase === GamePhase.LOADING_CARD) return;
       handleDialClick();
   };
 
   const handleRestartClick = (e: React.MouseEvent) => {
-      e.stopPropagation(); // Prevent global click from firing
+      e.stopPropagation(); 
       startGame();
   }
 
@@ -244,7 +236,7 @@ const App: React.FC = () => {
     <header className="absolute top-4 right-4 md:right-10 z-50">
       <button 
         onClick={handleRestartClick} 
-        className="bg-white hover:bg-gray-100 text-gray-800 border border-gray-300 px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition-transform hover:scale-105 active:scale-95"
+        className="bg-white hover:bg-gray-100 text-gray-800 border border-gray-300 px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition-transform hover:scale-105 active:scale-95 shadow-sm"
       >
         <RefreshCcw size={20} /> <span className="text-sm md:text-base">Reiniciar</span>
       </button>
@@ -253,23 +245,24 @@ const App: React.FC = () => {
 
   return (
     <div 
-        className="h-screen w-screen flex flex-col bg-white overflow-hidden text-gray-800 relative touch-none select-none font-sans"
+        className="h-screen w-screen flex flex-col relative overflow-hidden text-gray-800 touch-none select-none font-sans"
         onClick={handleGlobalClick}
     >
+      {/* Background: Split Gray (Top) / White (Bottom) */}
+      <div className="fixed inset-0 z-0 flex flex-col pointer-events-none">
+          <div className="w-full h-[50vh] bg-[#ededed]"></div>
+          <div className="w-full h-[50vh] bg-white"></div>
+      </div>
+      
       {renderHeader()}
       
       <GameStatus phase={phase} isSpinning={isSpinning} score={score} scoreMessage={scoreMessage} />
 
-      {/* Main Content Area - Centered Vertically and Horizontally */}
-      <main className="flex-1 flex flex-col items-center justify-center p-0 w-full relative">
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col items-center justify-center p-0 w-full relative z-10">
         
         <div className="w-full flex flex-col items-center justify-center gap-4">
           
-          {/* 
-             Container for Dial and Card.
-             Desktop: Fixed width matching max-w-4xl.
-             Mobile: Full width, scaled to fit.
-          */}
           <div className="w-full max-w-4xl px-2 flex flex-col items-center">
              
              {/* The Dial */}
@@ -284,9 +277,7 @@ const App: React.FC = () => {
              </div>
 
              {/* Card Display */}
-             {/* Increased top margin to separate disk from card */}
              <div className="w-full mt-4 md:mt-12 relative z-10">
-                {/* Mobile: h-20, Desktop: h-32 */}
                 <div className="rounded-lg relative overflow-hidden h-20 md:h-32 flex items-center justify-center w-full">
                     <div className="w-full h-full flex items-center justify-center">
                         {!currentCard ? (
@@ -295,12 +286,9 @@ const App: React.FC = () => {
                             </div>
                         ) : (
                             <div className={`w-full flex h-full transition-opacity duration-700 ${fadeConcepts ? 'opacity-100' : 'opacity-0'} rounded-lg overflow-hidden`}>
-                                {/* Left Side */}
                                 <div className={`flex-1 ${currentTheme.left} flex items-center justify-center px-2 md:px-4 text-center`}>
                                     <span className="text-sm sm:text-base md:text-3xl font-black text-black leading-tight block break-words uppercase">{currentCard.left}</span>
                                 </div>
-                                
-                                {/* Right Side */}
                                 <div className={`flex-1 ${currentTheme.right} flex items-center justify-center px-2 md:px-4 text-center`}>
                                     <span className="text-sm sm:text-base md:text-3xl font-black text-black leading-tight block break-words uppercase">{currentCard.right}</span>
                                 </div>
