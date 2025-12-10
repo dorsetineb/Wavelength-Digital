@@ -6,6 +6,9 @@
     <title>Sintonia Digital</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+      // Polyfill para evitar erro 'process is not defined' no navegador
+      window.process = window.process || { env: {} };
+
       tailwind.config = {
         theme: {
           extend: {
@@ -57,5 +60,6 @@
 </head>
   <body>
     <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
   </body>
 </html>
